@@ -1,4 +1,4 @@
-"""Command-line interface for the filemap package."""
+"""Command-line interface for the foldermap package."""
 
 import os
 import argparse

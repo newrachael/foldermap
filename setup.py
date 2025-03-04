@@ -6,21 +6,21 @@ with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
 # Read version from __init__.py
-with open(os.path.join('filemap', '__init__.py'), encoding='utf-8') as f:
+with open(os.path.join('foldermap', '__init__.py'), encoding='utf-8') as f:
     for line in f:
         if line.startswith('__version__'):
             version = line.split("'")[1]
             break
 
 setup(
-    name="filemap",
+    name="foldermap",
     version=version,
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Raykim",
+    author_email="enro2414@gmail.com",
     description="A tool for mapping files and folders to markdown documentation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/filemap",
+    url="https://github.com/newrachael/foldermap",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -37,7 +37,7 @@ setup(
     python_requires=">=3.6",
     entry_points={
         "console_scripts": [
-            "filemap=filemap.cli:main",
+            "foldermap=foldermap.cli:main",
         ],
     },
 )

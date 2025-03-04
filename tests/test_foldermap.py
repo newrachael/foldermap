@@ -1,13 +1,13 @@
-"""Tests for the filemap package."""
+"""Tests for the foldermap package."""
 
 import os
 import tempfile
 import unittest
-from filemap import collect_files, get_folder_structure
+from foldermap import collect_files, get_folder_structure
 
 
-class TestFilemap(unittest.TestCase):
-    """Test cases for filemap package."""
+class TestFoldermapunittest.TestCase):
+    """Test cases for foldermap package."""
 
     def setUp(self):
         """Set up temporary files for testing."""

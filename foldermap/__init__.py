@@ -1,5 +1,5 @@
 """
-filemap - Map files and folders to markdown documentation
+foldermap - Map files and folders to markdown documentation
 
 A tool for collecting files, visualizing folder structures,
 and generating comprehensive markdown documentation.

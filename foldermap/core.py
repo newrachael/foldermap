@@ -1,4 +1,4 @@
-"""Core functionality for the filemap package."""
+"""Core functionality for the foldermap package."""
 
 import os
 import datetime
