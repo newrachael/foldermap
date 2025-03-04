@@ -6,7 +6,7 @@ import unittest
 from foldermap import collect_files, get_folder_structure
 
 
-class TestFoldermapunittest.TestCase):
+class TestFoldermap(unittest.TestCase):
     """Test cases for foldermap package."""
 
     def setUp(self):
