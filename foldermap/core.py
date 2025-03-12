@@ -174,3 +174,22 @@ def generate_markdown(folder_path, files, folder_structure, output_file):
             f.write("\n```\n\n")
             
             f.write("---\n\n")
+
+def generate_structure_only(folder_path, folder_structure, output_file):
+    """Generate a markdown report with only the folder structure.
+    
+    Args:
+        folder_path (str): Base folder path
+        folder_structure (list): Formatted folder structure
+        output_file (str): Path to output markdown file
+    """
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write("# Folder Structure Report\n\n")
+        f.write(f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        f.write(f"Base folder: `{os.path.abspath(folder_path)}`\n\n")
+        
+        # Write folder structure
+        f.write("## Folder Structure\n\n```\n")
+        for line in folder_structure:
+            f.write(f"{line}\n")
+        f.write("```\n")

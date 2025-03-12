@@ -6,7 +6,8 @@ import sys
 from .core import (
     collect_files,
     get_folder_structure,
-    generate_markdown
+    generate_markdown,
+    generate_structure_only
 )
 
 
@@ -28,6 +29,11 @@ def main():
     parser.add_argument(
         '-x', '--exclude', 
         help='Folders to exclude (comma-separated, e.g., node_modules,venv,.git)'
+    )
+    parser.add_argument(
+        '-s', '--structure-only',
+        action='store_true',
+        help='Output only the folder structure without file contents'
     )
     
     args = parser.parse_args()
@@ -53,9 +59,13 @@ def main():
     # Generate folder structure
     folder_structure = get_folder_structure(args.folder_path, files)
     
-    # Generate markdown file
-    generate_markdown(args.folder_path, files, folder_structure, args.output)
-    print(f"Done! Results saved to '{args.output}'.")
+    # Generate output based on the structure-only flag
+    if args.structure_only:
+        generate_structure_only(args.folder_path, folder_structure, args.output)
+        print(f"Done! Folder structure saved to '{args.output}'.")
+    else:
+        generate_markdown(args.folder_path, files, folder_structure, args.output)
+        print(f"Done! Full report saved to '{args.output}'.")
     
     return 0
 
