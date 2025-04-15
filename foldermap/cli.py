@@ -35,6 +35,11 @@ def main():
         action='store_true',
         help='Output only the folder structure without file contents'
     )
+    parser.add_argument(
+        '--include-hidden',
+        action='store_true',
+        help='Include hidden folders (starting with .) in the output'
+    )
     
     args = parser.parse_args()
     
@@ -53,7 +58,7 @@ def main():
     print(f"Searching folder '{args.folder_path}'...")
     
     # Collect files (store relative paths)
-    files = collect_files(args.folder_path, extensions, exclude_folders)
+    files = collect_files(args.folder_path, extensions, exclude_folders, args.include_hidden)
     print(f"Found {len(files)} files.")
     
     # Generate folder structure

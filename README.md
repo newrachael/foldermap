@@ -10,6 +10,7 @@ Foldermap is a utility that collects files from a directory, creates a visual tr
 * Create markdown reports with file contents
 * Generate structure-only reports (without file contents)
 * Simple command-line interface
+* Option to include/exclude hidden folders (starting with .)
 
 ## Installation
 
@@ -37,8 +38,11 @@ foldermap /path/to/folder -x node_modules,.git,venv
 # Generate structure-only report (without file contents)
 foldermap /path/to/folder -s
 
+# Include hidden folders (starting with .)
+foldermap /path/to/folder --include-hidden
+
 # Combine options
-foldermap /path/to/folder -o report.md -e py,txt -x node_modules,venv -s
+foldermap /path/to/folder -o report.md -e py,txt -x node_modules,venv -s --include-hidden
 ```
 
 ### Python API
@@ -50,7 +54,8 @@ from foldermap import collect_files, get_folder_structure, generate_markdown, ge
 files = collect_files(
     folder_path="your/folder/path", 
     extensions=[".py", ".txt"],  # Optional
-    exclude_folders=["venv", ".git"]  # Optional
+    exclude_folders=["venv", ".git"],  # Optional
+    include_hidden=False  # Optional, default is False
 )
 
 # Generate folder structure

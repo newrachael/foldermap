@@ -4,13 +4,14 @@ import os
 import datetime
 
 
-def collect_files(folder_path, extensions=None, exclude_folders=None):
+def collect_files(folder_path, extensions=None, exclude_folders=None, include_hidden=False):
     """Collect files from within a folder.
     
     Args:
         folder_path (str): Path to search for files
         extensions (list, optional): List of file extensions to include
         exclude_folders (list, optional): List of folder names or paths to exclude
+        include_hidden (bool, optional): Whether to include hidden folders (starting with .)
         
     Returns:
         list: List of collected file paths (relative to folder_path)
@@ -26,6 +27,10 @@ def collect_files(folder_path, extensions=None, exclude_folders=None):
             # Remove directories to be excluded (modifying dirs in-place affects os.walk)
             dirs[:] = [d for d in dirs if d not in exclude_folders and 
                       os.path.join(rel_path, d) not in exclude_folders]
+        
+        # Remove hidden folders if include_hidden is False
+        if not include_hidden:
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
         
         for file in files:
             file_path = os.path.join(root, file)
