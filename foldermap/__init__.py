@@ -5,7 +5,7 @@ A tool for collecting files, visualizing folder structures,
 and generating comprehensive markdown documentation.
 """
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 from .core import (
     collect_files,

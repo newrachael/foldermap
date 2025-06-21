@@ -22,6 +22,9 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/newrachael/foldermap",
     packages=find_packages(),
+    install_requires=[
+        "pathspec>=0.9.0",
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
