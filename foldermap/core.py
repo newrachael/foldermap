@@ -2,11 +2,12 @@
 
 import os
 import datetime
+from pathspec import PathSpec
 
 
 def collect_files(folder_path, extensions=None, exclude_folders=None, include_hidden=False):
-    """Collect files from within a folder.
-    
+    """Collect files from within a folder with improved .gitignore handling.
+
     Args:
         folder_path (str): Path to search for files
         extensions (list, optional): List of file extensions to include
@@ -16,40 +17,120 @@ def collect_files(folder_path, extensions=None, exclude_folders=None, include_hi
     Returns:
         list: List of collected file paths (relative to folder_path)
     """
-    collected_files = []
+    # Note: Default exclusions are now handled by CLI
+    # This allows for more explicit control
     
-    for root, dirs, files in os.walk(folder_path):
-        # Remove excluded folders from dirs to prevent walking into them
-        if exclude_folders:
-            # Get the relative path from the root folder
-            rel_path = os.path.relpath(root, folder_path)
-            
-            # Remove directories to be excluded (modifying dirs in-place affects os.walk)
-            dirs[:] = [d for d in dirs if d not in exclude_folders and 
-                      os.path.join(rel_path, d) not in exclude_folders]
+    # ─────────────────────────────────────────────────────────────────────────────
+    # 1) Load .gitignore patterns
+    gitignore_path = os.path.join(folder_path, '.gitignore')
+    gitignore_spec = None
+    if os.path.isfile(gitignore_path):
+        with open(gitignore_path, 'r') as f:
+            patterns = []
+            for line in f:
+                line = line.strip()
+                # Skip comments and empty lines
+                if line and not line.startswith('#'):
+                    patterns.append(line)
         
-        # Remove hidden folders if include_hidden is False
-        if not include_hidden:
-            dirs[:] = [d for d in dirs if not d.startswith('.')]
+        if patterns:
+            gitignore_spec = PathSpec.from_lines('gitwildmatch', patterns)
+    # ─────────────────────────────────────────────────────────────────────────────
+
+    collected_files = []
+
+    for root, dirs, files in os.walk(folder_path, topdown=True):
+        # Get relative path from folder_path
+        rel_root = os.path.relpath(root, folder_path)
+        if rel_root == '.':
+            rel_root = ''
+
+        # ─────────────────────────────────────────────────────────────────────────
+        # 2) Filter directories BEFORE os.walk descends into them
+        # ─────────────────────────────────────────────────────────────────────────
+        filtered_dirs = []
         
-        for file in files:
-            file_path = os.path.join(root, file)
+        for d in dirs:
+            # Build the full relative path for this directory
+            if rel_root:
+                dir_path = os.path.join(rel_root, d)
+            else:
+                dir_path = d
             
-            # Filter by specific extensions
+            # Normalize path for gitignore matching
+            dir_path_posix = dir_path.replace(os.sep, '/')
+            
+            # Check if should exclude
+            should_exclude = False
+            
+            # Check user-specified exclusions
+            if exclude_folders:
+                # Check both directory name and full path
+                if d in exclude_folders or dir_path in exclude_folders:
+                    should_exclude = True
+            
+            # Check hidden/dunder folders
+            if not include_hidden:
+                if d.startswith('.') or (d.startswith('__') and d.endswith('__')):
+                    should_exclude = True
+            
+            # Check .gitignore patterns
+            if gitignore_spec and not should_exclude:
+                # For directories, check multiple variations
+                # PathSpec expects directories to have trailing slashes for proper matching
+                paths_to_check = [
+                    d,                          # Just the directory name
+                    d + '/',                    # Directory name with trailing slash
+                    dir_path_posix,            # Full relative path
+                    dir_path_posix + '/',      # With trailing slash
+                ]
+                
+                for check_path in paths_to_check:
+                    if gitignore_spec.match_file(check_path):
+                        should_exclude = True
+                        break
+            
+            if not should_exclude:
+                filtered_dirs.append(d)
+        
+        # Update dirs in-place to control which subdirectories os.walk will visit
+        dirs[:] = filtered_dirs
+
+        # ─────────────────────────────────────────────────────────────────────────
+        # 3) Process files in current directory
+        # ─────────────────────────────────────────────────────────────────────────
+        for filename in files:
+            # Build relative file path
+            if rel_root:
+                rel_file = os.path.join(rel_root, filename)
+            else:
+                rel_file = filename
+            
+            # Normalize for gitignore matching
+            rel_file_posix = rel_file.replace(os.sep, '/')
+            
+            # Check .gitignore
+            if gitignore_spec and gitignore_spec.match_file(rel_file_posix):
+                continue
+            
+            # Check extensions
             if extensions:
-                file_ext = os.path.splitext(file)[1].lower()
-                if file_ext not in extensions:
+                ext = os.path.splitext(filename)[1].lower()
+                if ext not in extensions:
                     continue
             
-            # Calculate relative path
-            rel_path = os.path.relpath(file_path, folder_path)
-            collected_files.append(rel_path)
-    
+            # Check hidden files
+            if not include_hidden and filename.startswith('.'):
+                continue
+            
+            collected_files.append(rel_file)
+
     return collected_files
 
 
 def get_folder_structure(folder_path, files):
-    """Create a tree representation of the folder structure.
+    """
+    Create a tree representation of the folder structure.
     
     Args:
         folder_path (str): Base folder path
@@ -58,69 +139,49 @@ def get_folder_structure(folder_path, files):
     Returns:
         list: Formatted strings representing the folder structure
     """
-    # Extract folder paths from files
-    folders = set()
-    for file_path in files:
-        dir_path = os.path.dirname(file_path)
-        if dir_path:
-            folders.add(dir_path)
+    # Build a tree structure
+    tree = {}
     
-    # Create folder structure
-    structure = []
-    root_folders = set()
-    
-    # Find root folders
-    for folder in folders:
-        parts = folder.split(os.sep)
-        root_folders.add(parts[0])
-    
-    # Sort folder and file lists
-    sorted_folders = sorted(list(folders))
-    sorted_files = sorted(files)
-    
-    # Create folder structure representation
-    prev_level = 0
-    for folder in sorted_folders:
-        level = folder.count(os.sep) + 1
-        indent = "  " * level
-        folder_name = os.path.basename(folder)
-        structure.append(f"{indent}📁 {folder_name}")
-    
-    # Add files to structure
-    file_structure = []
-    for file_path in sorted_files:
-        dir_path = os.path.dirname(file_path)
-        file_name = os.path.basename(file_path)
-        level = file_path.count(os.sep) + 1
-        indent = "  " * level
+    # Add all files to tree
+    for file_path in sorted(files):
+        parts = file_path.split(os.sep)
+        current = tree
         
-        # Check if the folder containing the file is included in the structure
-        if dir_path in folders or dir_path == "":
-            file_structure.append((file_path, f"{indent}📄 {file_name}"))
-    
-    # Create final structure with proper ordering
-    final_structure = []
-    current_dir = ""
-    
-    # Handle root files
-    root_files = [f for f in sorted_files if os.sep not in f]
-    if root_files:
-        for file in root_files:
-            final_structure.append(f"📄 {file}")
-    
-    # Process folders
-    for folder in sorted_folders:
-        parts = folder.split(os.sep)
-        depth = len(parts)
-        indent = "  " * (depth - 1)
-        final_structure.append(f"{indent}📁 {parts[-1]}")
+        # Navigate/create folders
+        for part in parts[:-1]:
+            if part not in current:
+                current[part] = {}
+            current = current[part]
         
-        # Add direct child files of this folder
-        for file_path, file_str in file_structure:
-            if os.path.dirname(file_path) == folder:
-                final_structure.append(file_str)
-    
-    return final_structure
+        # Add file (using a special prefix to distinguish from folders)
+        filename = parts[-1]
+        current[f"_file_{filename}"] = None
+
+    # Convert tree to formatted strings
+    def tree_to_strings(tree_dict, prefix=""):
+        lines = []
+        items = sorted(tree_dict.items())
+        
+        # Separate files and folders
+        files = [(name, val) for name, val in items if name.startswith("_file_")]
+        folders = [(name, val) for name, val in items if not name.startswith("_file_")]
+        
+        # Process files first
+        for name, _ in files:
+            actual_name = name[6:]  # Remove "_file_" prefix
+            lines.append(f"{prefix}📄 {actual_name}")
+        
+        # Then process folders
+        for name, subtree in folders:
+            lines.append(f"{prefix}📁 {name}")
+            # Recurse into subfolder
+            new_prefix = prefix + "  "
+            lines.extend(tree_to_strings(subtree, new_prefix))
+        
+        return lines
+
+    # Generate final structure
+    return tree_to_strings(tree)
 
 
 def read_file_content(file_path):
@@ -180,6 +241,7 @@ def generate_markdown(folder_path, files, folder_structure, output_file):
             
             f.write("---\n\n")
 
+
 def generate_structure_only(folder_path, folder_structure, output_file):
     """Generate a markdown report with only the folder structure.
     
@@ -198,3 +260,44 @@ def generate_structure_only(folder_path, folder_structure, output_file):
         for line in folder_structure:
             f.write(f"{line}\n")
         f.write("```\n")
+
+
+# Debug function to help diagnose .gitignore issues
+def debug_gitignore(folder_path):
+    """Debug function to show what .gitignore patterns are being loaded."""
+    gitignore_path = os.path.join(folder_path, '.gitignore')
+    
+    if not os.path.isfile(gitignore_path):
+        print(f"No .gitignore file found at: {gitignore_path}")
+        return
+    
+    print(f"Loading .gitignore from: {gitignore_path}")
+    print("Patterns found:")
+    
+    with open(gitignore_path, 'r') as f:
+        for i, line in enumerate(f, 1):
+            original = line.rstrip('\n')
+            stripped = line.strip()
+            if stripped and not stripped.startswith('#'):
+                print(f"  Line {i}: '{original}' -> Pattern: '{stripped}'")
+            elif stripped.startswith('#'):
+                print(f"  Line {i}: '{original}' (comment, ignored)")
+            else:
+                print(f"  Line {i}: '{original}' (empty, ignored)")
+    
+    # Test specific paths
+    print("\nTesting common paths:")
+    test_paths = ['venv', 'venv/', 'venv/bin', 'venv/lib/python3.9/site-packages/test.py']
+    
+    patterns = []
+    with open(gitignore_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                patterns.append(line)
+    
+    if patterns:
+        spec = PathSpec.from_lines('gitwildmatch', patterns)
+        for path in test_paths:
+            matched = spec.match_file(path)
+            print(f"  '{path}': {'MATCHED (will be ignored)' if matched else 'NOT MATCHED'}")

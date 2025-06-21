@@ -66,3 +66,7 @@ collected_files.md
 
 # .pypirc 파일을 무시하여 실수로 인증 정보가 커밋되는 것을 방지
 .pypric
+
+
+venv
+tests
